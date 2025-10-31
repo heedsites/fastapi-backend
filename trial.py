@@ -4,10 +4,10 @@ from groq_chatbot import GroqChatbot
 
 app = FastAPI()
 
-GROQ_API_KEY = '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' 
+GROQ_API_KEY = 
 
 
-chatbot = GroqChatbot(api_key='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', model="llama-3.1-8b-instant")
+chatbot = GroqChatbot(api_key=, model="llama-3.1-8b-instant")
 
 class ChatRequest(BaseModel):
     prompt: str
@@ -26,3 +26,4 @@ async def chat_with_bot(request: ChatRequest):
 @app.get("/")
 async def root():
     return {"ABCD"}
+
