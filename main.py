@@ -123,3 +123,5 @@ def delete_task(task_id: int):
             tasks_db.remove(task)
             return {"message": f"Task {task_id} deleted successfully"}
     raise HTTPException(status_code=404, detail="Task not found")
+from ai_dashboard import router as ai_dashboard_router
+app.include_router(ai_dashboard_router)
