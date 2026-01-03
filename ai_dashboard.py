@@ -1,5 +1,6 @@
 from typing import List
 from fastapi import APIRouter
+from fastapi import HTTPException
 import os
 import requests
 
@@ -66,13 +67,15 @@ def skill_distribution():
 def ai_summary():
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-    prompt = f"""
-Top Students: {top_students()}
-Weak Students: {weak_students()}
-Skill Distribution: {skill_distribution()}
+    if not GROQ_API_KEY:
+        raise HTTPException(status_code=500, detail="GROQ_API_KEY not set")
 
-Give a short placement summary.
-"""
+    prompt = f"""
+    Top Students: {top_students()}
+    Weak Students: {weak_students()}
+    Skill Distribution: {skill_distribution()}
+    Give a short placement summary.
+    """
 
     response = requests.post(
         "https://api.groq.com/openai/v1/chat/completions",
@@ -84,8 +87,12 @@ Give a short placement summary.
             "model": "llama-3.3-70b-versatile",
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.3
-        }
+        },
+        timeout=20
     )
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=500, detail="Groq API failed")
 
     return {
         "summary": response.json()["choices"][0]["message"]["content"]
