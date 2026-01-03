@@ -1,14 +1,11 @@
-from typing import List
-from fastapi import APIRouter
-from fastapi import HTTPException
+from fastapi import APIRouter, HTTPException
 import os
 import requests
 
 router = APIRouter(prefix="/admin", tags=["AI Dashboard"])
 
-# --------------------
-# Dummy data (for now)
-# --------------------
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
 students = [
     {"mail": "aryan@gmail.com", "name": "Aryan"},
     {"mail": "sneha@gmail.com", "name": "Sneha"},
@@ -21,52 +18,32 @@ code_ratings = [
     {"mail": "rahul@gmail.com", "topic": "Python Basics", "marks": 30},
 ]
 
-# --------------------
-# APIs
-# --------------------
 @router.get("/top-students")
 def top_students(n: int = 3):
     result = []
     for r in code_ratings:
         for s in students:
             if s["mail"] == r["mail"]:
-                result.append({
-                    "name": s["name"],
-                    "mail": s["mail"],
-                    "marks": r["marks"]
-                })
-    result.sort(key=lambda x: x["marks"], reverse=True)
-    return result[:n]
-
+                result.append({**s, "marks": r["marks"]})
+    return sorted(result, key=lambda x: x["marks"], reverse=True)[:n]
 
 @router.get("/weak-students")
 def weak_students(threshold: int = 40):
-    result = []
-    for r in code_ratings:
-        if r["marks"] < threshold:
-            for s in students:
-                if s["mail"] == r["mail"]:
-                    result.append({
-                        "name": s["name"],
-                        "mail": s["mail"],
-                        "marks": r["marks"]
-                    })
-    return result
-
+    return [
+        {**s, "marks": r["marks"]}
+        for r in code_ratings
+        for s in students
+        if s["mail"] == r["mail"] and r["marks"] < threshold
+    ]
 
 @router.get("/skill-distribution")
 def skill_distribution():
-    skills = {"python": 0, "frontend": 0, "backend": 0}
-    for r in code_ratings:
-        if r["marks"] >= 50 and "python" in r["topic"].lower():
-            skills["python"] += 1
-    return skills
-
+    return {
+        "python": sum(1 for r in code_ratings if r["marks"] >= 50)
+    }
 
 @router.get("/ai-summary")
 def ai_summary():
-    GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-
     if not GROQ_API_KEY:
         raise HTTPException(status_code=500, detail="GROQ_API_KEY not set")
 
@@ -81,19 +58,16 @@ def ai_summary():
         "https://api.groq.com/openai/v1/chat/completions",
         headers={
             "Authorization": f"Bearer {GROQ_API_KEY}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         },
         json={
             "model": "llama-3.3-70b-versatile",
             "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.3
         },
-        timeout=20
+        timeout=15,
     )
 
     if response.status_code != 200:
         raise HTTPException(status_code=500, detail="Groq API failed")
 
-    return {
-        "summary": response.json()["choices"][0]["message"]["content"]
-    }
+    return {"summary": response.json()["choices"][0]["message"]["content"]}
