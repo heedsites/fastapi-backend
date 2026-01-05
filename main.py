@@ -1,44 +1,31 @@
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-<<<<<<< HEAD
 from groq import Groq
 from dotenv import load_dotenv
 import os
 import json
 
-# =========================
-# ENV SETUP
-# =========================
+# Load environment variables
 load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-
 if not GROQ_API_KEY:
     raise RuntimeError("GROQ_API_KEY not found")
 
+# Groq client
 client = Groq(api_key=GROQ_API_KEY)
-
-# ✅ Use only enabled model
 GROQ_MODEL = "llama-3.1-8b-instant"
 
-# =========================
-# FASTAPI APP
-# =========================
-app = FastAPI(
-    title="AI Coding Question Generator",
-    version="1.0.0"
-)
+# FastAPI app
+app = FastAPI(title="AI Coding Question Generator", version="1.0.0")
 
-# =========================
-# REQUEST MODEL
-# =========================
+# Request model
 class QuestionRequest(BaseModel):
     topic: str
     difficulty: str
     language: str  # c / cpp / python
 
-# =========================
-# PROMPT BUILDER
-# =========================
+# Build prompt
 def build_prompt(topic: str, difficulty: str, language: str) -> str:
     return f"""
 You are an API that generates coding questions.
@@ -69,80 +56,42 @@ STRICT JSON FORMAT:
 }}
 """
 
-# =========================
-# API ENDPOINT
-# =========================
+# API endpoint
 @app.post("/generate-question")
 def generate_question(req: QuestionRequest):
     try:
-        prompt = build_prompt(
-            req.topic,
-            req.difficulty,
-            req.language
-        )
+        prompt = build_prompt(req.topic, req.difficulty, req.language)
 
+        # Call Groq API
         response = client.chat.completions.create(
             model=GROQ_MODEL,
             messages=[
                 {"role": "system", "content": "Return strict JSON only."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.2,
-            response_format={"type": "json_object"}  # 🔒 FORCE JSON
+            temperature=0.2
         )
 
-        data = json.loads(response.choices[0].message.content)
+        # Safe parsing
+        try:
+            content = response.choices[0].message.content
+            data = json.loads(content)
+        except Exception as parse_err:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to parse Groq response: {parse_err}\nRaw response: {response}"
+            )
 
-        # Optional minimal validation
+        # Validate keys
         required_keys = [
-            "question",
-            "constraints",
-            "input_format",
-            "output_format",
-            "sample_input",
-            "sample_output",
-            "test_cases"
+            "question", "constraints", "input_format", "output_format",
+            "sample_input", "sample_output", "test_cases"
         ]
-
         for key in required_keys:
             if key not in data:
-                raise ValueError(f"Missing key in response: {key}")
+                raise HTTPException(status_code=500, detail=f"Missing key in response: {key}")
 
         return data
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-=======
-from typing import List, Optional
-
-from ai_dashboard import router as ai_dashboard_router
-
-app = FastAPI(title="Dynamic FastAPI To-Do & Role Management App")
-
-class Role(BaseModel):
-    id: int
-    name: str
-    description: Optional[str] = None
-
-class Project(BaseModel):
-    id: int
-    name: str
-    description: Optional[str] = None
-    roles: List[str] = []
-
-class Task(BaseModel):
-    id: int
-    name: str
-    assigned_to: Optional[str] = None
-    status: str = "Pending"
-
-roles_db: List[Role] = []
-projects_db: List[Project] = []
-tasks_db: List[Task] = []
-
-@app.get("/")
-def home():
-    return {"message": "API running successfully"}
-
-app.include_router(ai_dashboard_router)
->>>>>>> 74b444ee34b8438a38e8acf34e38bd4319c7f68f
+        raise HTTPException(status_code=500, detail=f"Server error: {e}")
