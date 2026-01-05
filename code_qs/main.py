@@ -1,0 +1,113 @@
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from groq import Groq
+from dotenv import load_dotenv
+import os
+import json
+
+# =========================
+# ENV SETUP
+# =========================
+load_dotenv()
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+if not GROQ_API_KEY:
+    raise RuntimeError("GROQ_API_KEY not found")
+
+client = Groq(api_key=GROQ_API_KEY)
+
+# ✅ Use only enabled model
+GROQ_MODEL = "llama-3.1-8b-instant"
+
+# =========================
+# FASTAPI APP
+# =========================
+app = FastAPI(
+    title="AI Coding Question Generator",
+    version="1.0.0"
+)
+
+# =========================
+# REQUEST MODEL
+# =========================
+class QuestionRequest(BaseModel):
+    topic: str
+    difficulty: str
+    language: str  # c / cpp / python
+
+# =========================
+# PROMPT BUILDER
+# =========================
+def build_prompt(topic: str, difficulty: str, language: str) -> str:
+    return f"""
+You are an API that generates coding questions.
+
+Topic: {topic}
+Difficulty: {difficulty}
+Language: {language}
+
+Respond ONLY with valid JSON.
+NO markdown.
+NO explanation.
+NO extra text.
+
+STRICT JSON FORMAT:
+{{
+  "question": "string",
+  "constraints": "string",
+  "input_format": "string",
+  "output_format": "string",
+  "sample_input": "string",
+  "sample_output": "string",
+  "test_cases": [
+    {{
+      "input": "string",
+      "output": "string"
+    }}
+  ]
+}}
+"""
+
+# =========================
+# API ENDPOINT
+# =========================
+@app.post("/generate-question")
+def generate_question(req: QuestionRequest):
+    try:
+        prompt = build_prompt(
+            req.topic,
+            req.difficulty,
+            req.language
+        )
+
+        response = client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=[
+                {"role": "system", "content": "Return strict JSON only."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.2,
+            response_format={"type": "json_object"}  # 🔒 FORCE JSON
+        )
+
+        data = json.loads(response.choices[0].message.content)
+
+        # Optional minimal validation
+        required_keys = [
+            "question",
+            "constraints",
+            "input_format",
+            "output_format",
+            "sample_input",
+            "sample_output",
+            "test_cases"
+        ]
+
+        for key in required_keys:
+            if key not in data:
+                raise ValueError(f"Missing key in response: {key}")
+
+        return data
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
