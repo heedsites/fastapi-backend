@@ -44,7 +44,7 @@ fastapi-backend/
 │       ├── ai_dashboard.py
 │       ├── groq_chatbot.py
 │       └── coding_questions.py
-├── app.py                    # Local development entry point
+├── index.py                  # Vercel entrypoint (exports FastAPI app)
 ├── requirements.txt          # Python dependencies
 ├── vercel.json              # Vercel deployment configuration
 └── README.md                # This file

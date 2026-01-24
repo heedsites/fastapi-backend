@@ -7,11 +7,12 @@ This error happens when using **custom builds** (`@vercel/python`) with **Mangum
 **Fix**: Use **Vercel’s native FastAPI support** (zero config). No Mangum, no custom builds.
 
 **What we use**:
-- **Entrypoint**: `app.py` at project root exports the FastAPI `app` (from `app.main`).
+- **Entrypoint**: `index.py` at project root exports the FastAPI `app` (from `app.main`).
+  - ⚠️ **Important**: We use `index.py` (not `app.py`) to avoid Python import conflicts with the `app/` directory.
 - **vercel.json**: No `builds` or `routes`. Only `version` and optional `env` (e.g. `PYTHONPATH`).
 - **No** `api/index.py`, **no** Mangum, **no** `@vercel/python` build.
 
-Vercel auto-detects FastAPI and runs `app` from `app.py`.
+Vercel auto-detects FastAPI and runs `app` from `index.py`.
 
 ## 🔧 Fixing the 500 Error (Missing API Key)
 
@@ -47,7 +48,11 @@ Add `GROQ_API_KEY` in Vercel environment variables and redeploy.
 ### FUNCTION_INVOCATION_FAILED
 
 1. **`issubclass() arg 1 must be a class`**  
-   Use native FastAPI (`app.py`, no Mangum, no custom builds) as above.
+   Use native FastAPI (`index.py`, no Mangum, no custom builds) as above.
+
+2. **`ModuleNotFoundError: No module named 'app.main'; 'app' is not a package`**  
+   This happens when you have both `app.py` (file) and `app/` (directory). Python sees `app.py` as a module named `app`, which shadows the `app/` package.  
+   **Fix**: Use `index.py` (or `server.py`) as the entrypoint instead of `app.py`.
 
 2. **Other causes**  
    - Missing env vars (e.g. `GROQ_API_KEY`).  
