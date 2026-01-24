@@ -5,13 +5,22 @@ from dotenv import load_dotenv
 
 from app.models.coding_questions import QuestionRequest
 
+# Load environment variables
 load_dotenv()
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-if not GROQ_API_KEY:
-    raise RuntimeError("GROQ_API_KEY not found")
 
-client = Groq(api_key=GROQ_API_KEY)
 GROQ_MODEL = "llama-3.1-8b-instant"
+_client = None
+
+
+def _get_groq_client():
+    """Lazy initialization of Groq client."""
+    global _client
+    if _client is None:
+        groq_api_key = os.getenv("GROQ_API_KEY")
+        if not groq_api_key:
+            raise ValueError("GROQ_API_KEY environment variable is not set. Please configure it in Vercel environment variables.")
+        _client = Groq(api_key=groq_api_key)
+    return _client
 
 REQUIRED_KEYS = [
     "question", "constraints", "input_format", "output_format",
@@ -52,6 +61,7 @@ STRICT JSON FORMAT:
 
 def generate_question(req: QuestionRequest) -> dict:
     """Generate a coding question via Groq."""
+    client = _get_groq_client()
     prompt = _build_prompt(req.topic, req.difficulty, req.language)
 
     response = client.chat.completions.create(

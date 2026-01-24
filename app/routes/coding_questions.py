@@ -18,6 +18,7 @@ router = APIRouter(tags=["Coding Questions"])
             "model": QuestionResponse,
         },
         500: {"description": "Server error or failed to generate question"},
+        503: {"description": "Service unavailable - API key not configured"},
     },
 )
 def generate_question_route(req: QuestionRequest):
@@ -38,8 +39,14 @@ def generate_question_route(req: QuestionRequest):
     try:
         return generate_question(req)
     except ValueError as e:
+        error_msg = str(e)
+        if "GROQ_API_KEY" in error_msg:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="GROQ_API_KEY is not configured. Please set it in Vercel environment variables.",
+            )
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=error_msg
         )
     except Exception as e:
         raise HTTPException(
