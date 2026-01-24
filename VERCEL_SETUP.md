@@ -1,72 +1,65 @@
 # Vercel Deployment Setup Guide
 
-## 🔧 Fixing the 500 Error / TypeError
+## 🔧 Fixing `TypeError: issubclass() arg 1 must be a class` (FUNCTION_INVOCATION_FAILED)
 
-### Common Error: `TypeError: issubclass() arg 1 must be a class`
+This error happens when using **custom builds** (`@vercel/python`) with **Mangum**. Vercel’s legacy Python handler expects a WSGI app or `BaseHTTPRequestHandler`; Mangum is an ASGI adapter, so the internal `issubclass(...)` check fails.
 
-This error occurs when Vercel can't properly handle the FastAPI app. The solution is to use **Mangum** as an ASGI adapter.
+**Fix**: Use **Vercel’s native FastAPI support** (zero config). No Mangum, no custom builds.
 
-**Solution Applied**:
-- Added `mangum` to `requirements.txt`
-- Updated `api/index.py` to wrap FastAPI app with Mangum
+**What we use**:
+- **Entrypoint**: `app.py` at project root exports the FastAPI `app` (from `app.main`).
+- **vercel.json**: No `builds` or `routes`. Only `version` and optional `env` (e.g. `PYTHONPATH`).
+- **No** `api/index.py`, **no** Mangum, **no** `@vercel/python` build.
 
-If you still see this error after deploying:
-1. Make sure `mangum` is in `requirements.txt`
-2. Verify `api/index.py` uses: `handler = Mangum(app, lifespan="off")`
-3. Redeploy without build cache
+Vercel auto-detects FastAPI and runs `app` from `app.py`.
 
 ## 🔧 Fixing the 500 Error (Missing API Key)
 
-The 500 error is likely due to missing environment variables. Follow these steps:
+The 500 error is often due to missing environment variables.
 
 ### Step 1: Add Environment Variables in Vercel
 
-1. Go to your Vercel project dashboard
-2. Navigate to **Settings** → **Environment Variables**
-3. Add the following environment variable:
-
-   **Name**: `GROQ_API_KEY`  
-   **Value**: Your Groq API key (get it from https://console.groq.com/)  
-   **Environment**: Production, Preview, Development (select all)
-
-4. Click **Save**
+1. Go to your Vercel project dashboard.
+2. Open **Settings** → **Environment Variables**.
+3. Add:
+   - **Name**: `GROQ_API_KEY`
+   - **Value**: Your Groq API key (from https://console.groq.com/)
+   - **Environment**: Production, Preview, Development (select all)
+4. Click **Save**.
 
 ### Step 2: Redeploy
 
-After adding the environment variable:
-
-1. Go to **Deployments** tab
-2. Click the **⋯** (three dots) on the latest deployment
-3. Click **Redeploy**
-4. Make sure to check **"Use existing Build Cache"** is unchecked (to ensure new env vars are picked up)
+1. Go to the **Deployments** tab.
+2. Click **⋯** on the latest deployment → **Redeploy**.
+3. Uncheck **Use existing Build Cache**.
 
 ### Step 3: Verify
 
-1. Visit your deployed URL
-2. Check the root endpoint: `https://your-app.vercel.app/`
-3. Check Swagger docs: `https://your-app.vercel.app/docs`
+- Root: `https://your-app.vercel.app/`
+- Docs: `https://your-app.vercel.app/docs`
 
 ## 🐛 Troubleshooting
 
-### Error: "GROQ_API_KEY not found"
+### "GROQ_API_KEY not found"
 
-**Solution**: Make sure you've added `GROQ_API_KEY` in Vercel environment variables and redeployed.
+Add `GROQ_API_KEY` in Vercel environment variables and redeploy.
 
-### Error: "FUNCTION_INVOCATION_FAILED"
+### FUNCTION_INVOCATION_FAILED
 
-**Possible causes**:
-1. Missing environment variable (see above)
-2. Import error - check Vercel build logs
-3. Missing dependency - ensure `requirements.txt` has all packages
+1. **`issubclass() arg 1 must be a class`**  
+   Use native FastAPI (`app.py`, no Mangum, no custom builds) as above.
 
-**Check logs**:
-1. Go to Vercel Dashboard → Your Project → Deployments
-2. Click on the failed deployment
-3. Check the **Function Logs** tab for detailed error messages
+2. **Other causes**  
+   - Missing env vars (e.g. `GROQ_API_KEY`).  
+   - Import errors → check **Build** and **Function** logs.  
+   - Missing deps → ensure `requirements.txt` includes everything.
 
-### Error: Module not found
+**Check logs**: Vercel Dashboard → Project → Deployments → deployment → **Function Logs**.
 
-**Solution**: Ensure all dependencies are in `requirements.txt`:
+### Module not found
+
+List all dependencies in `requirements.txt`, e.g.:
+
 ```
 fastapi
 uvicorn
@@ -74,29 +67,32 @@ groq
 python-dotenv
 ```
 
+**Do not** add the standalone `typing` package; it can break FastAPI/Pydantic on Vercel.
+
 ## 📝 Environment Variables Checklist
 
-- [ ] `GROQ_API_KEY` - Required for coding questions and chatbot features
+- [ ] `GROQ_API_KEY` – required for coding questions and chatbot
 
 ## 🔍 Testing Locally Before Deploying
 
-1. Create a `.env` file in the root:
+1. Create a `.env` in the project root:
+
    ```env
    GROQ_API_KEY=your_key_here
    ```
 
-2. Run locally:
+2. Run:
+
    ```bash
    uvicorn app.main:app --reload
    ```
 
-3. Test endpoints:
-   - `http://localhost:8000/` - Should work (no API key needed)
-   - `http://localhost:8000/api/generate-question` - Needs API key
+3. Test:
+   - `http://localhost:8000/` – health (no API key)
+   - `http://localhost:8000/api/generate-question` – needs API key
 
 ## ✅ Success Indicators
 
-When everything is working:
-- Root endpoint (`/`) returns JSON with API info
-- Swagger docs (`/docs`) loads correctly
-- `/api/generate-question` returns questions (if API key is set) or a clear error message (if not set)
+- `/` returns JSON with API info.
+- `/docs` loads Swagger UI.
+- `/api/generate-question` works when `GROQ_API_KEY` is set, or returns a clear error when not.
