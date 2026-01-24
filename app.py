@@ -12,3 +12,4 @@ app.include_router(groq_chatbot.router, prefix="/api", tags=["Groq Chatbot"])
 @app.get("/")
 def root():
     return {"message": "Hello from root app.py - Heedsites backend is live!"}
+ 
