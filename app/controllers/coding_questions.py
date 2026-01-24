@@ -2,6 +2,7 @@ import os
 import json
 from groq import Groq
 from dotenv import load_dotenv
+from fastapi import HTTPException
 
 from app.models.coding_questions import QuestionRequest
 
@@ -18,9 +19,13 @@ def _get_groq_client():
     if _client is None:
         groq_api_key = os.getenv("GROQ_API_KEY")
         if not groq_api_key:
-            raise ValueError("GROQ_API_KEY environment variable is not set. Please configure it in Vercel environment variables.")
+            raise HTTPException(
+                status_code=500,
+                detail="GROQ_API_KEY environment variable is not set. Please configure it in Vercel environment variables."
+            )
         _client = Groq(api_key=groq_api_key)
     return _client
+
 
 REQUIRED_KEYS = [
     "question", "constraints", "input_format", "output_format",
@@ -61,26 +66,49 @@ STRICT JSON FORMAT:
 
 def generate_question(req: QuestionRequest) -> dict:
     """Generate a coding question via Groq."""
-    client = _get_groq_client()
+    try:
+        client = _get_groq_client()
+    except HTTPException:
+        raise  # Re-raise HTTPException as-is
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to initialize Groq client: {str(e)}"
+        )
+
     prompt = _build_prompt(req.topic, req.difficulty, req.language)
 
-    response = client.chat.completions.create(
-        model=GROQ_MODEL,
-        messages=[
-            {"role": "system", "content": "Return strict JSON only."},
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.2,
-    )
+    try:
+        response = client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=[
+                {"role": "system", "content": "Return strict JSON only."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.2,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Groq API request failed: {str(e)}"
+        )
 
     content = response.choices[0].message.content
+    
     try:
         data = json.loads(content)
     except json.JSONDecodeError as e:
-        raise ValueError(f"Failed to parse Groq response: {e}\nRaw: {content}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to parse Groq response as JSON: {str(e)}\nRaw content: {content[:200]}"
+        )
 
-    for key in REQUIRED_KEYS:
-        if key not in data:
-            raise ValueError(f"Missing key in response: {key}")
+    # Validate required keys
+    missing_keys = [key for key in REQUIRED_KEYS if key not in data]
+    if missing_keys:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Missing required keys in response: {', '.join(missing_keys)}"
+        )
 
     return data
