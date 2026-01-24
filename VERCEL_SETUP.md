@@ -1,6 +1,21 @@
 # Vercel Deployment Setup Guide
 
-## 🔧 Fixing the 500 Error
+## 🔧 Fixing the 500 Error / TypeError
+
+### Common Error: `TypeError: issubclass() arg 1 must be a class`
+
+This error occurs when Vercel can't properly handle the FastAPI app. The solution is to use **Mangum** as an ASGI adapter.
+
+**Solution Applied**:
+- Added `mangum` to `requirements.txt`
+- Updated `api/index.py` to wrap FastAPI app with Mangum
+
+If you still see this error after deploying:
+1. Make sure `mangum` is in `requirements.txt`
+2. Verify `api/index.py` uses: `handler = Mangum(app, lifespan="off")`
+3. Redeploy without build cache
+
+## 🔧 Fixing the 500 Error (Missing API Key)
 
 The 500 error is likely due to missing environment variables. Follow these steps:
 
