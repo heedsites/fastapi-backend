@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-from app.routes import ai_dashboard_router, groq_chatbot_router, coding_questions_router
-
+from dotenv import load_dotenv
+load_dotenv()  # Load environment variables from .env file
+from app.routes import groq_chatbot_router, coding_questions_router
+from app.routes.ai_dashboard import router as ai_dashboard_router
 app = FastAPI(
     title="Heedsites Backend API",
     description="FastAPI backend with AI Dashboard, Groq Chatbot, and Coding Questions Generator",
@@ -22,7 +23,8 @@ app.add_middleware(
 )
 
 # Include route modules
-app.include_router(ai_dashboard_router, prefix="/api", tags=["AI Dashboard"])
+
+app.include_router(ai_dashboard_router, prefix="/ai-dashboard", tags=["AI Dashboard"])
 app.include_router(groq_chatbot_router, prefix="/api", tags=["Groq Chatbot"])
 app.include_router(coding_questions_router, prefix="/api", tags=["Coding Questions"])
 
@@ -40,3 +42,6 @@ def root():
         "redoc": "/redoc",
         "openapi": "/openapi.json",
     }
+
+
+
