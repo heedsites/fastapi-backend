@@ -1,7 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 
-from app.routes import ai_dashboard_router, groq_chatbot_router, coding_questions_router
+# Load environment variables
+load_dotenv()
+
+# Import routers
+from app.routes import groq_chatbot_router, coding_questions_router
+from app.routes.ai_dashboard import router as ai_dashboard_router
 
 app = FastAPI(
     title="Heedsites Backend API",
@@ -31,8 +37,6 @@ app.include_router(coding_questions_router, prefix="/api", tags=["Coding Questio
 def root():
     """
     Root endpoint - API health check.
-    
-    Returns a welcome message confirming the API is running.
     """
     return {
         "message": "Hello from Heedsites backend – live!",
