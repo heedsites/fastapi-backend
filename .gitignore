@@ -1,19 +1,6 @@
-﻿venv/
-.env
-.vercel/
-__pycache__/
+﻿__pycache__/
 *.pyc
-*.zip
-# python
-__pycache__/
-*.pyc
-*.pyo
-
-# virtual env
 venv/
-
-# environment variables
 .env
-
-# IDE
-.vscode/
+node_modules/
+dist/
