@@ -8,6 +8,8 @@ load_dotenv()
 # Import routers
 from app.routes import groq_chatbot_router, coding_questions_router
 from app.routes.ai_dashboard import router as ai_dashboard_router
+from app.routes.ai_resume import router as ai_resume_router
+
 
 app = FastAPI(
     title="Heedsites Backend API",
@@ -31,7 +33,7 @@ app.add_middleware(
 app.include_router(ai_dashboard_router, prefix="/api", tags=["AI Dashboard"])
 app.include_router(groq_chatbot_router, prefix="/api", tags=["Groq Chatbot"])
 app.include_router(coding_questions_router, prefix="/api", tags=["Coding Questions"])
-
+app.include_router(ai_resume_router)
 
 @app.get("/", tags=["Root"])
 def root():
