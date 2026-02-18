@@ -23,8 +23,8 @@ class ResumeRequest(BaseModel):
 
 
 class ResumeResponse(BaseModel):
-    summary: str
-    experience_points: List[str]
-    project_descriptions: List[str]
-    skill_highlights: List[str]
-    suggestions: List[str]
+    professional_summary: str
+    technical_skills: List[str]
+    experience_highlights: List[str]
+    project_details: List[str]
+

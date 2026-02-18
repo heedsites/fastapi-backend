@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 from app.models.ai_resume import ResumeRequest, ResumeResponse
 from app.controllers.ai_resume import generate_resume
+router = APIRouter(prefix="/api/ai-resume", tags=["AI Resume"])
 
-router = APIRouter(prefix="/ai_resume", tags=["AI Resume"])
 
 
 @router.post("/generate", response_model=ResumeResponse)
