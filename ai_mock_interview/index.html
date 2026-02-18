@@ -1,100 +1,106 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>AI Mock Interview</title>
-  <style>
-    body { font-family: Arial; padding: 20px; }
-    input, button { margin: 6px; padding: 6px; }
-    #final { color: green; font-weight: bold; }
-  </style>
+    <title>AI Mock Interview</title>
 </head>
 <body>
 
 <h2>AI Mock Interview</h2>
 
-<input id="domain" placeholder="Enter any domain" size="40" />
+<input type="text" id="domain" placeholder="Enter domain (e.g. cloud)">
 <button onclick="startInterview()">Start Interview</button>
 
 <h3 id="question"></h3>
-<p><b>Difficulty:</b> <span id="difficulty">Easy</span></p>
+<p id="difficulty"></p>
 
 <button onclick="startRecording()">🎤 Start Answer</button>
 <button onclick="stopRecording()">⏹ Stop</button>
 
-<p><b>Your Answer:</b> <span id="answer"></span></p>
-
-<p id="final"></p>
+<h3>Your Answer:</h3>
+<p id="answer"></p>
 
 <script>
-let mediaRecorder, audioChunks = [];
+
 let sessionId = null;
+let recognition;
+let finalTranscript = "";
 
 async function startInterview() {
-  const domain = document.getElementById("domain").value.trim();
-  if (!domain) return alert("Enter a domain");
 
-  const fd = new FormData();
-  fd.append("domain", domain);
+    const domain = document.getElementById("domain").value;
 
-  const res = await fetch("http://127.0.0.1:8000/start", {
-    method: "POST",
-    body: fd
-  });
+    const formData = new FormData();
+    formData.append("domain", domain);
 
-  const data = await res.json();
-  sessionId = data.session_id;
-
-  document.getElementById("question").innerText = data.question;
-  document.getElementById("difficulty").innerText = "Easy";
-  document.getElementById("final").innerText = "";
-}
-
-async function startRecording() {
-  audioChunks = [];
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  mediaRecorder = new MediaRecorder(stream);
-  mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-  mediaRecorder.start();
-}
-
-async function stopRecording() {
-  mediaRecorder.stop();
-  mediaRecorder.onstop = async () => {
-    const blob = new Blob(audioChunks, { type: "audio/webm" });
-
-    const fd = new FormData();
-    fd.append("session_id", sessionId);
-    fd.append("audio", blob, "answer.webm");
-
-    const res = await fetch("http://127.0.0.1:8000/answer", {
-      method: "POST",
-      body: fd
+    const response = await fetch("http://127.0.0.1:8000/start", {
+        method: "POST",
+        body: formData
     });
 
-    const data = await res.json();
+    const data = await response.json();
+
+    sessionId = data.session_id;
+
+    document.getElementById("question").innerText = data.question;
+    document.getElementById("difficulty").innerText = "Difficulty: " + data.difficulty;
+}
+
+function startRecording() {
+
+    recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = "en-US";
+    recognition.continuous = true;
+
+    finalTranscript = "";
+
+    recognition.onresult = function(event) {
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            finalTranscript += event.results[i][0].transcript;
+        }
+    };
+
+    recognition.start();
+}
+
+function stopRecording() {
+
+    recognition.stop();
+
+    sendAnswer(finalTranscript);
+}
+
+async function sendAnswer(text) {
+
+    const response = await fetch("http://127.0.0.1:8000/answer", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            session_id: sessionId,
+            answer_text: text
+        })
+    });
+
+    const data = await response.json();
 
     if (data.error) {
-      alert(data.error);
-      return;
+        alert(data.error);
+        return;
     }
 
     document.getElementById("answer").innerText = data.answer_text;
 
-    // Interview finished
     if (data.interview_completed) {
-      document.getElementById("final").innerText =
-        "Final Feedback: " + data.final_feedback;
-      document.getElementById("question").innerText =
-        "Interview Completed 🎉";
-      return;
+        alert("Interview Completed!");
+        alert(data.final_feedback);
+        return;
     }
 
-    // Continue interview
     document.getElementById("question").innerText = data.next_question;
-    document.getElementById("difficulty").innerText =
-      data.difficulty.toUpperCase();
-  };
+    document.getElementById("difficulty").innerText = "Difficulty: " + data.difficulty;
 }
+
 </script>
 
 </body>
