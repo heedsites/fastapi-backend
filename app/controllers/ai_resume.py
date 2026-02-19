@@ -3,6 +3,7 @@ import json
 from groq import Groq
 from fastapi import HTTPException
 from app.models.ai_resume import ResumeRequest, ResumeResponse
+from app.services.mock_student_profile import get_student_profile
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
@@ -218,7 +219,15 @@ async def generate_resume(data: ResumeRequest) -> ResumeResponse:
 
     # 5️⃣ Final validation
     try:
-        return ResumeResponse(**normalized)
+        profile = get_student_profile(data.student_name)
+        final_response = {
+            **normalized,
+            "education": profile["education"],
+            "certifications": profile["certifications"],
+            "work_experience": profile["work_experience"],
+        }
+        return ResumeResponse(**final_response)
+
     except Exception as e:
         print("STRUCTURED:", structured)
         print("NORMALIZED:", normalized)
