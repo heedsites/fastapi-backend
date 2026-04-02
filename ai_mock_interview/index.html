@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Mock Interview</title>
+</head>
+<body>
+
+<h2>AI Mock Interview</h2>
+
+<input type="text" id="domain" placeholder="Enter domain (e.g. cloud)">
+<button onclick="startInterview()">Start Interview</button>
+
+<h3 id="question"></h3>
+<p id="difficulty"></p>
+
+<button onclick="startRecording()">🎤 Start Answer</button>
+<button onclick="stopRecording()">⏹ Stop</button>
+
+<h3>Your Answer:</h3>
+<p id="answer"></p>
+
+<script>
+
+let sessionId = null;
+let recognition;
+let finalTranscript = "";
+
+async function startInterview() {
+
+    const domain = document.getElementById("domain").value;
+
+    const formData = new FormData();
+    formData.append("domain", domain);
+
+    const response = await fetch("http://127.0.0.1:8000/start", {
+        method: "POST",
+        body: formData
+    });
+
+    const data = await response.json();
+
+    sessionId = data.session_id;
+
+    document.getElementById("question").innerText = data.question;
+    document.getElementById("difficulty").innerText = "Difficulty: " + data.difficulty;
+}
+
+function startRecording() {
+
+    recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = "en-US";
+    recognition.continuous = true;
+
+    finalTranscript = "";
+
+    recognition.onresult = function(event) {
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            finalTranscript += event.results[i][0].transcript;
+        }
+    };
+
+    recognition.start();
+}
+
+function stopRecording() {
+
+    recognition.stop();
+
+    sendAnswer(finalTranscript);
+}
+
+async function sendAnswer(text) {
+
+    const response = await fetch("http://127.0.0.1:8000/answer", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            session_id: sessionId,
+            answer_text: text
+        })
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+        alert(data.error);
+        return;
+    }
+
+    document.getElementById("answer").innerText = data.answer_text;
+
+    if (data.interview_completed) {
+        alert("Interview Completed!");
+        alert(data.final_feedback);
+        return;
+    }
+
+    document.getElementById("question").innerText = data.next_question;
+    document.getElementById("difficulty").innerText = "Difficulty: " + data.difficulty;
+}
+
+</script>
+
+</body>
+</html>
