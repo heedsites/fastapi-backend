@@ -25,6 +25,12 @@ from PIL import Image
 
 import deepinv as dinv
 
+app = FastAPI()
+
+@app.get("/")
+def read_root():
+    return {"message": "Hello"}
+
 # ==============================
 # ENV
 # ==============================
