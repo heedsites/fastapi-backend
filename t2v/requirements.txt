@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+torch
+torchaudio
+faster-whisper
+transformers
+sentencepiece
+soundfile
+TTS
+python-multipart
