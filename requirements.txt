@@ -18,3 +18,4 @@ imageio-ffmpeg==0.5.1
 decorator==4.4.2
 proglog==0.1.10
 tqdm==4.66.5
+gunicorn==22.0.0

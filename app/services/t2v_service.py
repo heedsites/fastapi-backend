@@ -34,7 +34,7 @@ Pixar style animation, soft lighting
 def generate_scenes(text: str):
 
     prompt = f"""
-Create 2 scenes. Return ONLY JSON.
+Create 5 scenes. Return ONLY JSON.
 
 [
   {{
