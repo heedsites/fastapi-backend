@@ -34,7 +34,7 @@ Pixar style animation, soft lighting
 def generate_scenes(text: str):
 
     prompt = f"""
-Create 5 scenes. Return ONLY JSON.
+Create 1 scenes. Return ONLY JSON.
 
 [
   {{
@@ -111,7 +111,7 @@ def generate_image(
 
         image = (
             Image.open(image_path)
-            .resize((1280, 720))
+            .resize((640, 360))
         )
 
         image.save(image_path)
@@ -232,7 +232,7 @@ def create_video(scenes: list):
 
     final_video.write_videofile(
         output_path,
-        fps=12
+        fps=6
     )
 
     return output_path
