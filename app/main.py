@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routes import ai_dashboard_router, groq_chatbot_router, coding_questions_router
-
+from app.routes.t2v import router as t2v_router
 app = FastAPI(
     title="Heedsites Backend API",
     description="FastAPI backend with AI Dashboard, Groq Chatbot, and Coding Questions Generator",
@@ -25,7 +25,7 @@ app.add_middleware(
 app.include_router(ai_dashboard_router, prefix="/api", tags=["AI Dashboard"])
 app.include_router(groq_chatbot_router, prefix="/api", tags=["Groq Chatbot"])
 app.include_router(coding_questions_router, prefix="/api", tags=["Coding Questions"])
-
+app.include_router(t2v_router,prefix="/api")
 
 @app.get("/", tags=["Root"])
 def root():
